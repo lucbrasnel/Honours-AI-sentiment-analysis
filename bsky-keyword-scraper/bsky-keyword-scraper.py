@@ -1,0 +1,217 @@
+from atproto import Client
+import json
+from datetime import datetime
+import sys
+
+client = Client()
+
+def login():
+
+  try:
+    client.get_profile()
+    print('session already exists')
+    return True
+  except:
+    print('logging in')
+    
+  bSuccess = False
+
+  try:
+    print('sending login details')
+    client.login('lucbrasnel.bsky.social', 'LsneEgpi(0')
+  except Exception as e:
+    if(e.response.content.error == 'AuthFactorTokenRequired'):
+      authCode = input('Get auth code from email: ')
+      try:
+        client.login(login ='lucbrasnel.bsky.social', password = 'LsneEgpi(0', auth_factor_token = authCode)
+      except Exception as e:
+        print(f"login error: {e}")
+      else:
+        print('successful login')
+        bSuccess = True
+    else:
+      print(f"login error: {e}")
+
+  return bSuccess
+      
+def get_posts_with(output_file, keyword, since, until, lim = None, verbose = False):
+  #set vars
+  b_next = True
+  remainder = lim
+  post_count = 0
+  data_out = []
+
+  if lim is not None: # if limit is given
+    # Get initial latest posts
+    if lim > 100:
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      remainder = lim - len(data.posts)
+    else:
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
+      remainder = 0
+
+  else: # No limit is given
+    # Get initial latest posts
+    data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    remainder = None
+
+  # for each post in prev dataset, export relavant data
+  posts = data.posts  
+  post_count += len(posts)
+
+  for post in posts: 
+    post_data = get_post_data(post)
+    data_out.append(post_data)
+    save_to_file(post_data, output_file) # save data to jsonl file
+
+  while (b_next and (remainder is None or (isinstance(remainder, (int, float)) and remainder > 0))):
+    # get timestamp of earliest
+    if len(posts) > 0:
+      earliest = posts[-1].record.created_at
+
+      print(f"Earliest post: {earliest}")
+    else:
+      break
+
+    # if posts still in date range
+    if (remainder == None or remainder != 0):
+      print(f"Getting next set")
+      if(earliest >= since):
+        data, remainder = get_more_posts(keyword, since, earliest, remainder) # retrieve next set posts with until = timestamp
+        print(f"remainder update: {remainder}")
+      else:
+        b_next = False # no more posts to collect within date range
+        print(f"Date range limit reached")
+    else:
+      b_next = False # remainder = 0
+      print(f"Post limit reached")
+        
+    # for each post in prev dataset, export relavant data
+    posts = data.posts    
+
+    for post in posts: 
+      post_data = get_post_data(post)
+      data_out.append(post_data)
+      save_to_file(post_data, output_file) # save data to jsonl file
+    
+    print(f"saved {len(posts)} posts to file")
+  
+  if verbose: print(f"saved {post_count} to file: {output_file}")
+  return data_out
+
+
+def get_more_posts(q, since, until, remainder = None):
+  #for recursive post collection
+  if remainder == None:
+    data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    print(f"another data get with no lim")
+  else:
+    if remainder > 100:
+      print(f"data get with remainder > 100: {remainder}")
+      data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      remainder = remainder - len(data.posts)
+    else:
+      print(f"init data get with remainder <= 100: {remainder}")
+      data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : remainder})
+      remainder = 0
+
+  return data, remainder
+
+def get_post_data(post):
+  txt = post.record.text #text
+  createdAt = post.record.created_at #time
+  cid = post.cid #cid - hash of post
+  uri = post.uri #uri - for verification
+  likes = post.like_count #likes
+  replies = post.reply_count #replies count
+  reposts = post.repost_count #repost count
+  tags = post.record.tags #tags
+
+  #extract hashtags
+  indexies = [h for h, v in enumerate(txt) if v == '#']
+  htags = []
+
+  for y in indexies:
+    c = txt[y]
+    htag = ''
+    n = 0
+    bflag = True
+
+    while bflag:
+      htag = htag + c
+
+      n = n + 1
+
+      if (y+n <= len(txt)-1):
+        c = txt[y+n]
+        if (c == ' '):
+          bflag = False
+      else:
+        bflag = False
+
+    htags.append(htag)
+
+
+  # if has attached media that could be ai generated
+  ai_content_types = ['app.bsky.embed.images', 'app.bsky.embed.video']
+
+  if (post.record.embed != None):
+    if (post.record.embed.py_type == 'app.bsky.embed.recordWithMedia'):
+      if(post.record.embed.media.py_type in ai_content_types):
+        has_imgvid = True
+      else:
+        has_imgvid = False
+
+    elif (post.record.embed.py_type in ai_content_types):
+      has_imgvid = True
+
+    else:
+      has_imgvid = False
+
+  else:
+    has_imgvid = False
+
+  x = {
+      "text": txt,
+      "created_at": createdAt,
+      "cid": cid,
+      "uri": uri,
+      "likes": likes,
+      "replies": replies,
+      "reposts": reposts,
+      "tags": tags,
+      "hastags": htags,
+      "has_imgvid": has_imgvid
+  }
+
+  return x
+
+# Write data to jsonl file
+def save_to_file(data, filename):
+  with open(filename, 'a') as f:
+      json.dump(data, f)
+      f.write('\n')
+
+if __name__ == "__main__":
+  keywords = ['AI', 'LLM', 'genAI', 'gen AI', 'deepfake', 'Artificial Intelligence', 'ChatGPT', 'Gemini', 'Claude', 'Midjourney', 'Dall-e', 'Copilot', 'Synthesia', 'OpenAI', 'Anthropic', 'Stable Diffusion', 'Palantir']
+
+  limit = None
+
+  since = '2025-01-01T01:00:00Z'
+  until = '2025-01-02T01:00:00Z'
+  date_format = "%Y-%m-%dT%H:%M:%SZ"
+
+  since_date = datetime.strptime(since, date_format)
+  until_date = datetime.strptime(until, date_format)
+  
+  blogin = login()
+
+  if blogin:
+    for x in keywords:
+      print(f"Extracting posts about {x} from {since} till {until}")
+      output_file = f"{x}_{since_date.strftime('%-d%b%Y')}_{until_date.strftime('%-d%b%Y')}_posts.jsonl"
+
+      data = get_posts_with(output_file, x, since, until, limit)
+      print(f"successfully extracted {output_file}")
+  else:
+    print('Couldnt login')
