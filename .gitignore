@@ -634,3 +634,6 @@ FodyWeavers.xsd
 
 # Scraper output
 bsky-keyword-scraper/Scraper_Out/**
+
+#Scraper config file
+bsky-keyword-scraper/config.ini
