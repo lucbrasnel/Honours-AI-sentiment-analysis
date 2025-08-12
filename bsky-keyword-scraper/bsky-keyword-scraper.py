@@ -1,7 +1,7 @@
 from atproto import Client
 import json
 from datetime import datetime
-import sys
+import ast
 import configparser
 
 # ===================================== Global vars ===========================================
@@ -198,7 +198,7 @@ if __name__ == "__main__":
   # config setup:
   config.read('config.ini')
 
-  keywords = config['DEFAULT']['keywords']
+  keywords = ast.literal_eval(config['DEFAULT']['keywords'])
   limit = config['DEFAULT']['limit']
   if limit == 'None':
     limit = None
@@ -217,8 +217,12 @@ if __name__ == "__main__":
 
   username = config['LOGIN']['username']
   password = config['LOGIN']['password']
+
+  for x in keywords:
+    print(x)
   
-  blogin = login(username, password)
+  #blogin = login(username, password)
+  blogin = False
 
   if blogin:
     for x in keywords:
