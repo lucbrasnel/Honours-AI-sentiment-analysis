@@ -2,6 +2,7 @@ from atproto import Client
 import json
 from datetime import datetime
 import sys
+from pathlib import Path
 
 # Global vars
 client = Client()
@@ -192,24 +193,26 @@ def save_to_file(data, filename):
 if __name__ == "__main__":
   keywords = ['AI', 'LLM', 'genAI', 'gen AI', 'deepfake', 'Artificial Intelligence', 'ChatGPT', 'Gemini', 'Claude', 'Midjourney', 'Dall-e', 'Copilot', 'Synthesia', 'OpenAI', 'Anthropic', 'Stable Diffusion', 'Palantir']
 
-  limit = None
+  limit = 200
   verbose = True
+  output_path = 'Scraper_Out'
 
-  since = '2025-01-01T01:00:00Z'
-  until = '2025-01-02T01:00:00Z'
+  since = '2024-01-01T01:00:00Z'
+  until = '2025-01-01T23:59:59Z'
   date_format = "%Y-%m-%dT%H:%M:%SZ"
 
   since_date = datetime.strptime(since, date_format)
   until_date = datetime.strptime(until, date_format)
   
+  print('\f')#clear terminal
   blogin = login()
 
   if blogin:
     for x in keywords:
       print(f"Extracting posts about {x} from {since} till {until}")
-      output_file = f"{x}_{since_date.strftime('%-d%b%Y')}_{until_date.strftime('%-d%b%Y')}_posts.jsonl"
+      output_file = f"{output_path}/{x}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
 
       data = get_posts_with(output_file, x, since, until, limit, verbose)
-      print(f"successfully extracted {output_file}")
+      print(f"successfully extracted {output_file}\n")
   else:
     print('Couldnt login')
