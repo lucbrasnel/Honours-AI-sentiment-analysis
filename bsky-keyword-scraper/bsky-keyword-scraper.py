@@ -2,13 +2,16 @@ from atproto import Client
 import json
 from datetime import datetime
 import sys
+import configparser
 
 # ===================================== Global vars ===========================================
 client = Client()
 
+config = configparser.ConfigParser()
+
 # ====================================== func defs ============================================
 
-def login():
+def login(username, passw):
 
   try:
     client.app.bsky.feed.get_suggested_feeds()
@@ -26,7 +29,7 @@ def login():
     if(e.response.content.error == 'AuthFactorTokenRequired'):
       authCode = input('Get auth code from email: ')
       try:
-        client.login(login ='lucbrasnel.bsky.social', password = 'LsneEgpi(0', auth_factor_token = authCode)
+        client.login(login = username, password = passw, auth_factor_token = authCode)
       except Exception as e:
         print(f"login error: {e}")
       else:
@@ -192,20 +195,30 @@ def save_to_file(data, filename):
 # ===================================== Main func =============================================
 
 if __name__ == "__main__":
-  keywords = ['AI', 'LLM', 'genAI', 'gen AI', 'deepfake', 'Artificial Intelligence', 'ChatGPT', 'Gemini', 'Claude', 'Midjourney', 'Dall-e', 'Copilot', 'Synthesia', 'OpenAI', 'Anthropic', 'Stable Diffusion', 'Palantir']
+  # config setup:
+  config.read('config.ini')
 
-  limit = 200
-  verbose = True
-  output_path = 'Scraper_Out'
+  keywords = config['DEFAULT']['keywords']
+  limit = config['DEFAULT']['limit']
+  if limit == 'None':
+    limit = None
+  else: limit = int(limit)
 
-  since = '2024-01-01T01:00:00Z'
-  until = '2025-01-01T23:59:59Z'
+  verbose = config['DEFAULT'].getboolean('verbose')
+  output_path = config['DEFAULT']['output_path']
+
+  since = config['DEFAULT']['since_date']
+  until = config['DEFAULT']['until_date']
+
   date_format = "%Y-%m-%dT%H:%M:%SZ"
 
   since_date = datetime.strptime(since, date_format)
   until_date = datetime.strptime(until, date_format)
+
+  username = config['LOGIN']['username']
+  password = config['LOGIN']['password']
   
-  blogin = login()
+  blogin = login(username, password)
 
   if blogin:
     for x in keywords:
