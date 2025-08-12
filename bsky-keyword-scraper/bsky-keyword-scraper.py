@@ -2,12 +2,11 @@ from atproto import Client
 import json
 from datetime import datetime
 import sys
-from pathlib import Path
 
-# Global vars
+# ===================================== Global vars ===========================================
 client = Client()
 
-# func defs
+# ====================================== func defs ============================================
 
 def login():
 
@@ -190,6 +189,8 @@ def save_to_file(data, filename):
       json.dump(data, f)
       f.write('\n')
 
+# ===================================== Main func =============================================
+
 if __name__ == "__main__":
   keywords = ['AI', 'LLM', 'genAI', 'gen AI', 'deepfake', 'Artificial Intelligence', 'ChatGPT', 'Gemini', 'Claude', 'Midjourney', 'Dall-e', 'Copilot', 'Synthesia', 'OpenAI', 'Anthropic', 'Stable Diffusion', 'Palantir']
 
@@ -204,7 +205,6 @@ if __name__ == "__main__":
   since_date = datetime.strptime(since, date_format)
   until_date = datetime.strptime(until, date_format)
   
-  print('\f')#clear terminal
   blogin = login()
 
   if blogin:
@@ -216,3 +216,5 @@ if __name__ == "__main__":
       print(f"successfully extracted {output_file}\n")
   else:
     print('Couldnt login')
+
+# ===================================== end of program ========================================
