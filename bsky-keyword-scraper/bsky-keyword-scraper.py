@@ -67,27 +67,23 @@ def get_posts_with(output_file, keyword, since, until, lim = None, verbose = Fal
     data_out.append(post_data)
     save_to_file(post_data, output_file) # save data to jsonl file
 
+  if verbose: print(f"Saved init {post_count} posts to file: {output_file}")
+
   while (b_next and (remainder is None or (isinstance(remainder, (int, float)) and remainder > 0))):
     # get timestamp of earliest
     if len(posts) > 0:
       earliest = posts[-1].record.created_at
-
-      print(f"Earliest post: {earliest}")
     else:
       break
 
     # if posts still in date range
     if (remainder == None or remainder != 0):
-      print(f"Getting next set")
       if(earliest >= since):
         data, remainder = get_more_posts(keyword, since, earliest, remainder) # retrieve next set posts with until = timestamp
-        print(f"remainder update: {remainder}")
       else:
         b_next = False # no more posts to collect within date range
-        print(f"Date range limit reached")
     else:
       b_next = False # remainder = 0
-      print(f"Post limit reached")
         
     # for each post in prev dataset, export relavant data
     posts = data.posts    
@@ -97,9 +93,10 @@ def get_posts_with(output_file, keyword, since, until, lim = None, verbose = Fal
       data_out.append(post_data)
       save_to_file(post_data, output_file) # save data to jsonl file
     
-    print(f"saved {len(posts)} posts to file")
+    post_count += len(posts) #update post count with next batch
+    if verbose: print(f"saved next set of {len(posts)} posts to file")
   
-  if verbose: print(f"saved {post_count} to file: {output_file}")
+  if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
   return data_out
 
 
@@ -107,14 +104,11 @@ def get_more_posts(q, since, until, remainder = None):
   #for recursive post collection
   if remainder == None:
     data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
-    print(f"another data get with no lim")
   else:
     if remainder > 100:
-      print(f"data get with remainder > 100: {remainder}")
       data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
       remainder = remainder - len(data.posts)
     else:
-      print(f"init data get with remainder <= 100: {remainder}")
       data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : remainder})
       remainder = 0
 
@@ -199,6 +193,7 @@ if __name__ == "__main__":
   keywords = ['AI', 'LLM', 'genAI', 'gen AI', 'deepfake', 'Artificial Intelligence', 'ChatGPT', 'Gemini', 'Claude', 'Midjourney', 'Dall-e', 'Copilot', 'Synthesia', 'OpenAI', 'Anthropic', 'Stable Diffusion', 'Palantir']
 
   limit = None
+  verbose = True
 
   since = '2025-01-01T01:00:00Z'
   until = '2025-01-02T01:00:00Z'
@@ -214,7 +209,7 @@ if __name__ == "__main__":
       print(f"Extracting posts about {x} from {since} till {until}")
       output_file = f"{x}_{since_date.strftime('%-d%b%Y')}_{until_date.strftime('%-d%b%Y')}_posts.jsonl"
 
-      data = get_posts_with(output_file, x, since, until, limit)
+      data = get_posts_with(output_file, x, since, until, limit, verbose)
       print(f"successfully extracted {output_file}")
   else:
     print('Couldnt login')
