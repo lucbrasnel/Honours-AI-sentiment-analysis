@@ -221,8 +221,7 @@ if __name__ == "__main__":
   for x in keywords:
     print(x)
   
-  #blogin = login(username, password)
-  blogin = False
+  blogin = login(username, password)
 
   if blogin:
     for x in keywords:
