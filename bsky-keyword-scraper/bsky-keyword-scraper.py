@@ -3,12 +3,15 @@ import json
 from datetime import datetime
 import sys
 
+# Global vars
 client = Client()
+
+# func defs
 
 def login():
 
   try:
-    client.get_profile()
+    client.app.bsky.feed.get_suggested_feeds()
     print('session already exists')
     return True
   except:
