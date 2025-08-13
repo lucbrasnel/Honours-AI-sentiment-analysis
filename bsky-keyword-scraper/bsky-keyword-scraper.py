@@ -97,7 +97,7 @@ def get_posts_with(output_file, keyword, since, until, lim = None, verbose = Fal
       save_to_file(post_data, output_file) # save data to jsonl file
     
     post_count += len(posts) #update post count with next batch
-    if verbose: print(f"saved next set of {len(posts)} posts to file")
+    if verbose: print(f"saved {post_count} posts to file so far. Earliest: {earliest}")
   
   if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
   return data_out
@@ -126,6 +126,7 @@ def get_post_data(post):
   replies = post.reply_count #replies count
   reposts = post.repost_count #repost count
   tags = post.record.tags #tags
+  lang = post.record.langs #language of post
 
   #extract hashtags
   indexies = [h for h, v in enumerate(txt) if v == '#']
@@ -179,6 +180,7 @@ def get_post_data(post):
       "likes": likes,
       "replies": replies,
       "reposts": reposts,
+      "langs" : lang,
       "tags": tags,
       "hastags": htags,
       "has_imgvid": has_imgvid
