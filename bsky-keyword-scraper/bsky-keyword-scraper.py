@@ -144,7 +144,7 @@ def get_post_data(post):
 
       if (y+n <= len(txt)-1):
         c = txt[y+n]
-        if (c == ' '):
+        if (c == ' ' or c == '\n'):
           bflag = False
       else:
         bflag = False
@@ -217,9 +217,6 @@ if __name__ == "__main__":
 
   username = config['LOGIN']['username']
   password = config['LOGIN']['password']
-
-  for x in keywords:
-    print(x)
   
   blogin = login(username, password)
 
