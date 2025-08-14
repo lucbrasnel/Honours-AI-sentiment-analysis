@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 import numpy as np
 import math
+import ast
 import configparser
 
 # ===================================== Global vars ===========================================
@@ -284,7 +285,7 @@ if __name__ == "__main__":
   else: limit = int(limit)
 
   verbose = config['DEFAULT'].getboolean('verbose')
-  rndm = config['DEFAULT'].getboolean('randdom')
+  #rndm = config['DEFAULT'].getboolean('randdom')
   sort = config['DEFAULT']['sort']
   output_path = config['DEFAULT']['output_path']
 
@@ -306,7 +307,7 @@ if __name__ == "__main__":
       print(f"Extracting posts about {x} from {since} till {until}")
       output_file = f"{output_path}/{x}_{sort}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
 
-      data = get_posts_with(output_file, x, since, until, limit, sort, verbose)
+      data = get_posts_with(output_file, x, since, until, limit, sort, verbose) #if not(rndom):
       #else: data = get_random_posts(output_file, x, since, until, limit, sort, verbose) #not finished
       print(f"successfully extracted {output_file}\n")
   else:
