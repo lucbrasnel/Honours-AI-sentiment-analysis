@@ -45,8 +45,72 @@ def login(username, passw):
 
 #----------------------------------------------------------------------------------------------
 
+def get_posts_with_earliest(output_file, keyword, since, until, lim = None, verbose = False):
+  #set vars
+  b_next = True
+  remainder = lim
+  post_count = 0
+  data_out = []
+
+  if lim is not None: # if limit is given
+    # Get initial latest posts
+    if lim > 100:
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      remainder = lim - len(data.posts)
+    else:
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
+      remainder = 0
+
+  else: # No limit is given
+    # Get initial latest posts
+    data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    remainder = None
+
+  # for each post in prev dataset, export relavant data
+  posts = data.posts  
+  post_count += len(posts)
+
+  for post in posts: 
+    post_data = get_post_data(post)
+    data_out.append(post_data)
+    save_to_file(post_data, output_file) # save data to jsonl file
+
+  if verbose: print(f"Saved init {post_count} posts to file: {output_file}")
+
+  while (b_next and (remainder is None or (isinstance(remainder, (int, float)) and remainder > 0))):
+    # get timestamp of earliest
+    if len(posts) > 0:
+      earliest = posts[-1].record.created_at
+    else:
+      break
+
+    # if posts still in date range
+    if (remainder == None or remainder != 0):
+      if(earliest >= since):
+        data, remainder = get_more_posts(keyword, since, earliest, remainder) # retrieve next set posts with until = timestamp
+      else:
+        b_next = False # no more posts to collect within date range
+    else:
+      b_next = False # remainder = 0
+        
+    # for each post in prev dataset, export relavant data
+    posts = data.posts    
+
+    for post in posts: 
+      post_data = get_post_data(post)
+      data_out.append(post_data)
+      save_to_file(post_data, output_file) # save data to jsonl file
+    
+    post_count += len(posts) #update post count with next batch
+    if verbose: print(f"saved {post_count} posts to file so far. Earliest: {earliest}")
+  
+  if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
+  return data_out
+
+#----------------------------------------------------------------------------------------------
+
 #Get posts containing a keyword and save it to a jsonl file    
-def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'latest', verbose = False):
+def get_posts_with_pages(output_file, keyword, since, until, lim = None, sort = 'latest', verbose = False):
   #set vars
   b_next = True
   remainder = lim
@@ -307,7 +371,8 @@ if __name__ == "__main__":
       print(f"Extracting posts about {x} from {since} till {until}")
       output_file = f"{output_path}/{x}_{sort}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
 
-      data = get_posts_with(output_file, x, since, until, limit, sort, verbose) #if not(rndom):
+      data = get_posts_with_earliest(output_file, x, since, until, limit, sort, verbose)
+      #data = get_posts_with_pages(output_file, x, since, until, limit, sort, verbose) #if not(rndom):  #Not working for large collections
       #else: data = get_random_posts(output_file, x, since, until, limit, sort, verbose) #not finished
       print(f"successfully extracted {output_file}\n")
   else:
