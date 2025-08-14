@@ -40,7 +40,7 @@ def login(username, passw):
 
   return bSuccess
       
-def get_posts_with(output_file, keyword, since, until, lim = None, verbose = False):
+def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'latest', verbose = False):
   #set vars
   b_next = True
   remainder = lim
@@ -50,15 +50,15 @@ def get_posts_with(output_file, keyword, since, until, lim = None, verbose = Fal
   if lim is not None: # if limit is given
     # Get initial latest posts
     if lim > 100:
-      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
       remainder = lim - len(data.posts)
     else:
-      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
       remainder = 0
 
   else: # No limit is given
     # Get initial latest posts
-    data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
     remainder = None
 
   # for each post in prev dataset, export relavant data
@@ -72,38 +72,37 @@ def get_posts_with(output_file, keyword, since, until, lim = None, verbose = Fal
 
   if verbose: print(f"Saved init {post_count} posts to file: {output_file}")
 
+  # get pagination cursor
+  next_page = data.cursor
+
   while (b_next and (remainder is None or (isinstance(remainder, (int, float)) and remainder > 0))):
-    # get timestamp of earliest
-    if len(posts) > 0:
-      earliest = posts[-1].record.created_at
-    else:
-      break
+    # retrieve next page of posts
+    data, remainder = get_more_posts(keyword, since, until, next_page, sort, remainder) 
+    
+    # if any more posts are retrieved
+    if (len(data.posts) > 0):
+      next_page = data.cursor # get next page cursor
 
-    # if posts still in date range
-    if (remainder == None or remainder != 0):
-      if(earliest >= since):
-        data, remainder = get_more_posts(keyword, since, earliest, remainder) # retrieve next set posts with until = timestamp
-      else:
-        b_next = False # no more posts to collect within date range
-    else:
-      b_next = False # remainder = 0
-        
-    # for each post in prev dataset, export relavant data
-    posts = data.posts    
+      # for each post in prev dataset, export relavant data
+      posts = data.posts
 
-    for post in posts: 
-      post_data = get_post_data(post)
-      data_out.append(post_data)
-      save_to_file(post_data, output_file) # save data to jsonl file
+      for post in posts:
+        post_data = get_post_data(post)
+        data_out.append(post_data)
+        save_to_file(post_data, output_file) # save data to jsonl file
+
+      print(f"saved {len(posts)} posts to file")
+    else:
+      b_next = False # no posts left
     
     post_count += len(posts) #update post count with next batch
-    if verbose: print(f"saved {post_count} posts to file so far. Earliest: {earliest}")
+    if verbose: print(f"saved {post_count} posts to file so far. Cursor: {next_page}")
   
   if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
   return data_out
 
 
-def get_more_posts(q, since, until, remainder = None):
+def get_more_posts(q, since, until, next_page, sort, remainder = None):
   #for recursive post collection
   if remainder == None:
     data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
@@ -207,6 +206,7 @@ if __name__ == "__main__":
   else: limit = int(limit)
 
   verbose = config['DEFAULT'].getboolean('verbose')
+  sort = config['DEFAULT']['sort']
   output_path = config['DEFAULT']['output_path']
 
   since = config['DEFAULT']['since_date']
@@ -227,7 +227,7 @@ if __name__ == "__main__":
       print(f"Extracting posts about {x} from {since} till {until}")
       output_file = f"{output_path}/{x}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
 
-      data = get_posts_with(output_file, x, since, until, limit, verbose)
+      data = get_posts_with(output_file, x, since, until, limit, sort, verbose)
       print(f"successfully extracted {output_file}\n")
   else:
     print('Couldnt login')
