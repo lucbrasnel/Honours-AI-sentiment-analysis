@@ -1,7 +1,8 @@
 from atproto import Client
 import json
-from datetime import datetime
-import ast
+from datetime import datetime, timedelta
+import numpy as np
+import math
 import configparser
 
 # ===================================== Global vars ===========================================
@@ -11,6 +12,7 @@ config = configparser.ConfigParser()
 
 # ====================================== func defs ============================================
 
+# log client instance in
 def login(username, passw):
 
   try:
@@ -39,7 +41,10 @@ def login(username, passw):
       print(f"login error: {e}")
 
   return bSuccess
-      
+
+#----------------------------------------------------------------------------------------------
+
+#Get posts containing a keyword and save it to a jsonl file    
 def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'latest', verbose = False):
   #set vars
   b_next = True
@@ -61,7 +66,7 @@ def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'lates
     data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
     remainder = None
 
-  # for each post in prev dataset, export relavant data
+  # for each post in init dataset, export relavant data
   posts = data.posts  
   post_count += len(posts)
 
@@ -90,8 +95,6 @@ def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'lates
         post_data = get_post_data(post)
         data_out.append(post_data)
         save_to_file(post_data, output_file) # save data to jsonl file
-
-      print(f"saved {len(posts)} posts to file")
     else:
       b_next = False # no posts left
     
@@ -101,21 +104,94 @@ def get_posts_with(output_file, keyword, since, until, lim = None, sort = 'lates
   if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
   return data_out
 
+#----------------------------------------------------------------------------------------------
 
+# for recursive post collection
 def get_more_posts(q, since, until, next_page, sort, remainder = None):
-  #for recursive post collection
   if remainder == None:
-    data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100, 'cursor' : next_page})
   else:
     if remainder > 100:
-      data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100, 'cursor' : next_page})
       remainder = remainder - len(data.posts)
     else:
-      data = client.app.bsky.feed.search_posts({'q' : q, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : remainder})
+      data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : remainder, 'cursor' : next_page})
       remainder = 0
 
   return data, remainder
 
+#----------------------------------------------------------------------------------------------
+
+# Get random posts containing a keyword across a date range and save it to a jsonl file
+# Gets 100 posts with a random date as until param in request
+def get_random_posts(output_file, keyword, since, until, amount = 1000, sort = 'latest', verbose = False):
+  #set vars
+  post_count = 0
+  data_out = []
+
+  if verbose: print(f"Saving random posts to file: {output_file}")
+
+  # need amount to get from date range. Othereise just randomly collecting everything
+  if amount == None:
+    print('Cannot use random without a limit')
+    return None
+  
+  # calc amount of requests needed to get all posts wanted 
+  if amount <= 100:
+    req_amount = 1
+  else:
+    req_amount = math.ceil(amount/100) #amount of requests to be sent
+
+  date_format = "%Y-%m-%dT%H:%M:%SZ"
+
+  since_date = datetime.strptime(since, date_format)
+  until_date = datetime.strptime(until, date_format)
+
+  # calc the amount of time that can be skipped between requests
+  total_time = (until_date - since_date).total_seconds()  + 1
+  print(total_time)
+  max_time = math.floor(total_time/req_amount)
+  min_time = math.ceil(max_time/2) # do not want too small of a skip between requests
+  print(f"max t: {max_time}, min t: {min_time}")
+
+  #set 1st date as until date
+  next_date = until_date
+
+  # collect sets of data with random dates that span the date range
+  for d in range(req_amount):
+    if d == 0: random_time = np.random.randint(0, min_time) #on 1st date add smaller randomness
+    else: random_time = np.random.randint(min_time, max_time) # on rest add same randomess
+
+    next_date = next_date - timedelta(seconds = random_time) # add randomess to date
+    use_date = next_date.strftime(date_format)
+
+    data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'until' : use_date, 'limit' : 100})
+    
+    if (len(data.posts) > 0):
+      # for each post in dataset, export relavant data
+      posts = data.posts
+
+      for post in posts:
+        post_data = get_post_data(post)
+        data_out.append(post_data)
+        save_to_file(post_data, output_file) # save data to jsonl file
+
+      post_count += len(posts) #update post count with next batch
+
+      if verbose: print(f"saved {len(posts)} posts from date: {use_date}")
+
+    # get earliest date from prev data and set as next date
+    earliest = posts[-1].record.created_at
+
+    next_date = datetime.fromisoformat(earliest)
+
+  
+  if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
+  return data_out
+
+#----------------------------------------------------------------------------------------------
+
+# export relevant post data from api response
 def get_post_data(post):
   txt = post.record.text #text
   createdAt = post.record.created_at #time
@@ -187,6 +263,8 @@ def get_post_data(post):
 
   return x
 
+#----------------------------------------------------------------------------------------------
+
 # Write data to jsonl file
 def save_to_file(data, filename):
   with open(filename, 'a') as f:
@@ -206,6 +284,7 @@ if __name__ == "__main__":
   else: limit = int(limit)
 
   verbose = config['DEFAULT'].getboolean('verbose')
+  rndm = config['DEFAULT'].getboolean('randdom')
   sort = config['DEFAULT']['sort']
   output_path = config['DEFAULT']['output_path']
 
@@ -225,9 +304,10 @@ if __name__ == "__main__":
   if blogin:
     for x in keywords:
       print(f"Extracting posts about {x} from {since} till {until}")
-      output_file = f"{output_path}/{x}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
+      output_file = f"{output_path}/{x}_{sort}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
 
       data = get_posts_with(output_file, x, since, until, limit, sort, verbose)
+      #else: data = get_random_posts(output_file, x, since, until, limit, sort, verbose) #not finished
       print(f"successfully extracted {output_file}\n")
   else:
     print('Couldnt login')
