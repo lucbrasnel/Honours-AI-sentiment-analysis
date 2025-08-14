@@ -45,7 +45,7 @@ def login(username, passw):
 
 #----------------------------------------------------------------------------------------------
 
-def get_posts_with_earliest(output_file, keyword, since, until, lim = None, verbose = False):
+def get_posts_with_earliest(output_file, keyword, since, until, lim = None, sort= 'latest', verbose = False):
   #set vars
   b_next = True
   remainder = lim
@@ -55,15 +55,15 @@ def get_posts_with_earliest(output_file, keyword, since, until, lim = None, verb
   if lim is not None: # if limit is given
     # Get initial latest posts
     if lim > 100:
-      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
       remainder = lim - len(data.posts)
     else:
-      data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
+      data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : lim})
       remainder = 0
 
   else: # No limit is given
     # Get initial latest posts
-    data = client.app.bsky.feed.search_posts({'q' : keyword, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
+    data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100})
     remainder = None
 
   # for each post in prev dataset, export relavant data
@@ -87,7 +87,7 @@ def get_posts_with_earliest(output_file, keyword, since, until, lim = None, verb
     # if posts still in date range
     if (remainder == None or remainder != 0):
       if(earliest >= since):
-        data, remainder = get_more_posts(keyword, since, earliest, remainder) # retrieve next set posts with until = timestamp
+        data, remainder = get_more_posts(keyword, since, earliest, sort, None, remainder) # retrieve next set posts with until = timestamp
       else:
         b_next = False # no more posts to collect within date range
     else:
@@ -172,15 +172,29 @@ def get_posts_with_pages(output_file, keyword, since, until, lim = None, sort = 
 #----------------------------------------------------------------------------------------------
 
 # for recursive post collection
-def get_more_posts(q, since, until, next_page, sort, remainder = None):
+def get_more_posts(q, since, until, sort, next_page = None, remainder = None):
+  params = {
+    'q' : q, 
+    'sort' : sort, 
+    'lang' : 'en', 
+    'since' : since, 
+    'until' : until
+  }
+
+  if next_page != None:
+    params['cursor'] = next_page
+
   if remainder == None:
-    data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100, 'cursor' : next_page})
+    params['limit'] = 100
+    data = client.app.bsky.feed.search_posts(params)
   else:
     if remainder > 100:
-      data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : 100, 'cursor' : next_page})
+      params['limit'] = 100
+      data = client.app.bsky.feed.search_posts(params)
       remainder = remainder - len(data.posts)
     else:
-      data = client.app.bsky.feed.search_posts({'q' : q, 'sort' : sort, 'lang' : 'en', 'since' : since, 'until' : until, 'limit' : remainder, 'cursor' : next_page})
+      params['limit'] = remainder
+      data = client.app.bsky.feed.search_posts(params)
       remainder = 0
 
   return data, remainder
