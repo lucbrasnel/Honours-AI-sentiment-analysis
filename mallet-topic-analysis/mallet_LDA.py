@@ -18,7 +18,7 @@ def format_data(data, verbose):
     #get data from line
     stuff = data.split('\t')
 
-    text = stuff[2:]
+    text = str(stuff[2:])
     uri = stuff[0]
     topic = stuff[1]
 
@@ -34,7 +34,7 @@ def get_posts_data(infile, verbose = False):
     uris = []
 
     # open file
-    with open(infile, 'r', encoding='utf-8') as f:
+    with open(infile, 'r') as f:
       # for every line, extract json
       count = 1
       for line in f:
@@ -74,7 +74,8 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"An error occurred: {e}")
     
-    output_data_path = f"pojects/{setName}"
+    file_path = os.getcwd()
+    output_data_path = f"{file_path}/projects/{setName}"
 
     path_training_data = output_data_path + '/training.txt'
     path_formatted_training_data = output_data_path + '/mallet.training'
@@ -84,13 +85,14 @@ if __name__ == "__main__":
     path_word_weights = output_data_path + '/mallet.word_weights.' + str(numTopics)
     path_diagnostics = output_data_path + '/mallet.diagnostics.' + str(numTopics) + '.xml'
 
+    # get training data
     textData, fileTopics, uris = get_posts_data(data_file, verbose)
 
     # import into mallet  
     lmw.import_data(mallet_path, path_training_data, path_formatted_training_data, textData, uris)
 
     # train topic model
-    lmw.train_topic_model(path_topic_keys)
+    lmw.train_topic_model(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, numTopics)
 
     # extract topics
     topic_keys = lmw.load_topic_keys(path_topic_keys)
