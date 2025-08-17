@@ -637,3 +637,6 @@ bsky-keyword-scraper/Scraper_Out/**
 
 #Scraper config file
 bsky-keyword-scraper/config.ini
+
+# Mallet out
+mallet-topic-analysis/outputs/**
