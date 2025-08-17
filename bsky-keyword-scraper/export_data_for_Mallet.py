@@ -14,11 +14,15 @@ def write_to_file(data, outfile, verbose):
     text = re.sub('\n', ' ', text)
     text = re.sub('\r', ' ', text)
 
+    # remove any unencodeable chars
+    rem_text = text.encode(encoding='cp1252', errors='ignore')
+    text = rem_text.decode(encoding='cp1252')
+
     #reformat to mallet tab-delimited format: [ID] [tag] [text]
     out = f"{uri}\t{topic}\t{text}"
 
     #write line to file
-    with open(outfile, 'a', encoding='utf-8') as f:
+    with open(outfile, 'a') as f:
         f.write(out)
         f.write('\n')
 
