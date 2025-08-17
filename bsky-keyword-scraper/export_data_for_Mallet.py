@@ -10,7 +10,7 @@ def write_to_file(data, outfile, verbose):
     topic = data['Topic']
 
     # replace \n chars in text
-    text = re.sub('\\n', ' ', text)
+    text = re.sub('\r?\n', ' ', text)
 
     #reformat to mallet tab-delimited format: [ID] [tag] [text]
     out = f"{uri}\t{topic}\t{text}"
