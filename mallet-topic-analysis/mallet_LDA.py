@@ -15,16 +15,12 @@ config = configparser.ConfigParser()
 #----------------------------------------------------------------------------------------------
   
 def format_data(data, verbose):    
-    #get data from json obj
-    text = data['text']
-    uri = data['uri']
-    topic = data['Topic']
+    #get data from line
+    stuff = data.split('\t')
 
-    # replace \n chars in text
-    text = re.sub('\\n', ' ', text)
-
-    #reformat to mallet tab-delimited format: [ID] [tag] [text]
-    #out = f"{uri}\t{topic}\t{text}"
+    text = stuff[2:]
+    uri = stuff[0]
+    topic = stuff[1]
 
     if verbose: print(f"extracted uri:{uri} on {topic}")
 
@@ -43,11 +39,9 @@ def get_posts_data(infile, verbose = False):
       count = 1
       for line in f:
         if verbose: print(f"reading line:{count}")
-        #lstr = line
-        ljson = json.loads(line)
 
         # extract data
-        uri, topic, text = format_data(ljson, verbose)
+        uri, topic, text = format_data(line, verbose)
 
         text_data.append(text)
         topics.append(topic)
@@ -62,7 +56,7 @@ def get_posts_data(infile, verbose = False):
 
 if __name__ == "__main__":
     # config setup:
-    config.read(os.path.dirname(os.path.abspath(__file__))+"config.ini")
+    config.read("config.ini")
 
     mallet_path = config['DEFAULT']['malletpath']
     data_file = config['DEFAULT']['datafile']
