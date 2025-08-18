@@ -58,13 +58,22 @@ if __name__ == "__main__":
 
     textData = read_training_text(path_training_data)
 
+    try:
+        os.mkdir(f"projects/{setName}/out")
+    except FileExistsError:
+       print(f"{setName} dir already exists in projects")
+    except PermissionError:
+        print(f"Permission denied: Unable to create 'projects/{setName}'.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
     # extract topics
     topic_keys = lmw.load_topic_keys(path_topic_keys)
 
     if verbose: print(f"topic dist len: {len(topic_keys)}")
 
     for i, topics in enumerate(topic_keys):
-        with open((output_data_path+'/topic_keys.txt'), 'a') as f:
+        with open((output_data_path+'/out/topic_keys.txt'), 'a') as f:
             f.write(f"{i}\t{topics}")
             f.write('\n')
 
@@ -75,7 +84,7 @@ if __name__ == "__main__":
     if verbose: print(f"topic dist len: {len(t_dist), len(t_dist[0])}")
 
     for p, d in lmw.get_top_docs(textData, t_dist, topic_index=0, n=100):
-        with open((output_data_path+'/top_docs.txt'), 'a') as f:
+        with open((output_data_path+'/out/top_docs.txt'), 'a') as f:
             f.write(f"{round(p,4)}\t{d}")
             f.write('\n')
 
@@ -85,11 +94,11 @@ if __name__ == "__main__":
     if verbose: print(f"Word prob dist len: {len(word_prob_dist)}")
 
     for _t, _wp in word_prob_dist.items():
-        print('Topic', _t)
-        for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:5]:
-            with open((output_data_path+'/Word_prob_dist.txt'), 'a') as f:
+        with open((output_data_path+'/out//Word_prob_dist.txt'), 'a') as f:
+            f.write(f"Topic: {_t}")
+            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:5]:
                 f.write(f"{round(_p,4)}\t{_w}")
                 f.write('\n')
-        f.write('\n')
+            f.write('\n')
 
 # ===================================== end of program ========================================
