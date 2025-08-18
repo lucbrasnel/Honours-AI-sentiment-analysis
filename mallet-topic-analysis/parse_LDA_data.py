@@ -63,7 +63,7 @@ if __name__ == "__main__":
     except FileExistsError:
        print(f"{setName} dir already exists in projects")
     except PermissionError:
-        print(f"Permission denied: Unable to create 'projects/{setName}'.")
+        print(f"Permission denied: Unable to create 'projects/{setName}/out'.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -94,9 +94,9 @@ if __name__ == "__main__":
     if verbose: print(f"Word prob dist len: {len(word_prob_dist)}")
 
     for _t, _wp in word_prob_dist.items():
-        with open((output_data_path+'/out//Word_prob_dist.txt'), 'a') as f:
-            f.write(f"Topic: {_t}")
-            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:5]:
+        with open((output_data_path+'/out/Word_prob_dist.txt'), 'a') as f:
+            f.write(f"Topic: {_t}\n")
+            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True):
                 f.write(f"{round(_p,4)}\t{_w}")
                 f.write('\n')
             f.write('\n')
