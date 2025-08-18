@@ -76,6 +76,7 @@ if __name__ == "__main__":
     
     file_path = os.getcwd()
     output_data_path = f"{file_path}/projects/{setName}"
+    data_file = output_data_path+'/'+data_file
 
     path_training_data = output_data_path + '/training.txt'
     path_formatted_training_data = output_data_path + '/mallet.training'
@@ -94,40 +95,7 @@ if __name__ == "__main__":
     # train topic model
     lmw.train_topic_model(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, numTopics)
 
-    # extract topics
-    topic_keys = lmw.load_topic_keys(path_topic_keys)
-
-    if verbose: print(f"topic dist len: {len(topic_keys)}")
-
-    print('writing topic keys to txt file')
-    for i, topics in enumerate(topic_keys):
-        with open((output_data_path+'topic_keys.txt'), 'a', encoding='utf-8') as f:
-            f.write(f"{i}\t{topics}")
-            f.write('\n')
-
-    # extract top docs
-    t_dist = lmw.load_topic_distributions(path_topic_distributions)
-    assert(len(t_dist) == len(textData))
-
-    if verbose: print(f"topic dist len: {len(t_dist), len(t_dist[0])}")
-
-    for p, d in lmw.get_top_docs(textData, t_dist, topic_index=0, n=100):
-        with open((output_data_path+'top_docs.txt'), 'a', encoding='utf-8') as f:
-            f.write(f"{round(p,4)}\t{d}")
-            f.write('\n')
-
-    # extract word probablity distributions
-    word_prob_dist = lmw.load_topic_word_distributions(path_word_weights)
-
-    if verbose: print(f"Word prob dist len: {len(word_prob_dist)}")
-
-    for _t, _wp in word_prob_dist.items():
-        print('Topic', _t)
-        for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:5]:
-            with open((output_data_path+'Word_prob_dist.txt'), 'a', encoding='utf-8') as f:
-                f.write(f"{round(_p,4)}\t{_w}")
-                f.write('\n')
-        f.write('\n')
+    
 
 
 # ===================================== end of program ========================================
