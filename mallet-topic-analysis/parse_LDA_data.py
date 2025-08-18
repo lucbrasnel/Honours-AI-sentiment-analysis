@@ -96,7 +96,7 @@ if __name__ == "__main__":
     for _t, _wp in word_prob_dist.items():
         with open((output_data_path+'/out/Word_prob_dist.txt'), 'a') as f:
             f.write(f"Topic: {_t}\n")
-            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True):
+            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:10]:
                 f.write(f"{round(_p,4)}\t{_w}")
                 f.write('\n')
             f.write('\n')
