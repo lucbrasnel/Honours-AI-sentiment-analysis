@@ -95,7 +95,4 @@ if __name__ == "__main__":
     # train topic model
     lmw.train_topic_model(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, numTopics)
 
-    
-
-
 # ===================================== end of program ========================================
