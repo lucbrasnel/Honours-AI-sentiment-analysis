@@ -634,10 +634,11 @@ FodyWeavers.xsd
 
 # output folders
 bsky-keyword-scraper/Scraper_Out/**
-nltk-vader-sentiment-analysiss/projects/**
+nltk-vader-sentiment-analysis/projects/**
 mallet-topic-analysis/projects/**
 
 #config files
 bsky-keyword-scraper/config.ini
+nltk-vader-sentiment-analysis/config.ini
 mallet-topic-analysis/config.ini
-nltk-vader-sentiment-analysis\config.ini
+nltk-vader-sentiment-analysis/config.ini
