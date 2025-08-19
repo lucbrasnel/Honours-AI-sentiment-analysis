@@ -639,6 +639,5 @@ mallet-topic-analysis/projects/**
 
 #config files
 bsky-keyword-scraper/config.ini
-nltk-vader-sentiment-analysis/config.ini
 mallet-topic-analysis/config.ini
 nltk-vader-sentiment-analysis/config.ini
