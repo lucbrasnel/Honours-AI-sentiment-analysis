@@ -643,3 +643,9 @@ mallet-topic-analysis/projects/**
 
 # mallet config file
 mallet-topic-analysis/config.ini
+
+# vader projects folder
+nltk-vader-sentiment-analysiss/projects/**
+
+# vader config file
+nltk-vader-sentiment-analysis/config.ini
