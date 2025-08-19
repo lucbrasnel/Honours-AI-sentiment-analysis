@@ -56,10 +56,12 @@ def export_sents_to_file(posts, outfile, verbose = False):
         'pos_sent' : 0
     }
 
+    count = 0
+
     # get sentiments for each post
     for post, uri  in posts:
         # get sentiment scores for text
-        if verbose: print(f"++ Getting scores for text with uri: {uri}")
+        if verbose: print(f"{count} Getting scores for text with uri: {uri}")
 
         sent_scores = sent_analyser.polarity_scores(post)
         
@@ -77,15 +79,16 @@ def export_sents_to_file(posts, outfile, verbose = False):
 
                 out[score_type] = new_score
 
-            if verbose: print(f"== Combined scores for post: {uri}\t| Compound:{out['compound_sent']}")
+            if verbose: print(f"{count} Combined scores for post: {uri}\t| Compound:{out['compound_sent']}")
         else:
             # print prev score for uri
             if out['uri'] != '': # except for init value
                 write_scores_to_file(outfile, out)
-                if verbose: print(f"__ Wrote scores for post: {uri}")
+                if verbose: print(f"{count} Wrote scores for post: {uri}")
 
             # set new uri and score for it
             out['uri'] = uri
+            count = count + 1
 
             for k in sorted(sent_scores):
                 score_type = f"{k}_sent"
