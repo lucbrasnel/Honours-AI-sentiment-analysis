@@ -18,9 +18,12 @@ def format_data(data, verbose):
     #get data from line
     stuff = data.split('\t')
 
-    text = str(stuff[2:])
+    text = ' '.join(stuff[2:])
     uri = stuff[0]
     topic = stuff[1]
+
+    #clean text
+    text = text.strip()
 
     # replace \n chars in text
     text = re.sub('\r?\n', ' ', text)
