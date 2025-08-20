@@ -21,9 +21,9 @@ def read_training_text(training_data):
         if verbose: print(f"reading line:{count}")
 
         # extract data
-        txtindx = line.index('[')
+        txtindx = line.index('no_label')
 
-        text = str(line[txtindx+1:-2])
+        text = str(line[txtindx+2:-1])
 
         text_data.append(text)
 
@@ -31,6 +31,48 @@ def read_training_text(training_data):
         count += 1
 
     return text_data
+
+# ---------------------------------------------------------------------------------------------
+
+def get_topic_keys(path_topic_keys, output_data_path, verbose):
+    topic_keys = lmw.load_topic_keys(path_topic_keys)
+
+    if verbose: print(f"topic dist len: {len(topic_keys)}")
+
+    for i, topics in enumerate(topic_keys):
+        with open((output_data_path+'/out/topic_keys.txt'), 'a') as f:
+            f.write(f"{i}\t{topics}")
+            f.write('\n')
+
+# ---------------------------------------------------------------------------------------------
+
+def get_top_docs(path_topic_distributions, output_data_path, textData, numTopics, verbose):
+    t_dist = lmw.load_topic_distributions(path_topic_distributions)
+    assert(len(t_dist) == len(textData))
+
+    if verbose: print(f"topic dist len: {len(t_dist), len(t_dist[0])}")
+
+
+    for i in range(int(numTopics)):
+        for p, d in lmw.get_top_docs(textData, t_dist, topic_index=i, n=100):
+            with open((output_data_path+f"/out/topic_{i}_top_docs.txt"), 'a') as f:
+                f.write(f"{round(p,4)}\t{d}")
+                f.write('\n')
+
+# ---------------------------------------------------------------------------------------------
+
+def get_word_prob_dist(path_word_weights, output_data_path, verbose):
+    word_prob_dist = lmw.load_topic_word_distributions(path_word_weights)
+
+    if verbose: print(f"Word prob dist len: {len(word_prob_dist)}")
+
+    for _t, _wp in word_prob_dist.items():
+        with open((output_data_path+'/out/Word_prob_dist.txt'), 'a') as f:
+            f.write(f"Topic: {_t}\n")
+            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:10]:
+                f.write(f"{round(_p,4)}\t{_w}")
+                f.write('\n')
+            f.write('\n')
 
 # ===================================== Main func =============================================
 
@@ -68,38 +110,13 @@ if __name__ == "__main__":
         print(f"An error occurred: {e}")
 
     # extract topics
-    topic_keys = lmw.load_topic_keys(path_topic_keys)
-
-    if verbose: print(f"topic dist len: {len(topic_keys)}")
-
-    for i, topics in enumerate(topic_keys):
-        with open((output_data_path+'/out/topic_keys.txt'), 'a') as f:
-            f.write(f"{i}\t{topics}")
-            f.write('\n')
+    get_topic_keys(path_topic_keys, output_data_path, verbose)
 
     # extract top docs
-    t_dist = lmw.load_topic_distributions(path_topic_distributions)
-    assert(len(t_dist) == len(textData))
-
-    if verbose: print(f"topic dist len: {len(t_dist), len(t_dist[0])}")
-
-    for i in range(int(numTopics)):
-        for p, d in lmw.get_top_docs(textData, t_dist, topic_index=i, n=100):
-            with open((output_data_path+f"/out/topic_{i}_top_docs.txt"), 'a') as f:
-                f.write(f"{round(p,4)}\t{d}")
-                f.write('\n')
+    #get_top_docs(path_topic_distributions, output_data_path, textData, numTopics, verbose)
 
     # extract word probablity distributions
-    word_prob_dist = lmw.load_topic_word_distributions(path_word_weights)
-
-    if verbose: print(f"Word prob dist len: {len(word_prob_dist)}")
-
-    for _t, _wp in word_prob_dist.items():
-        with open((output_data_path+'/out/Word_prob_dist.txt'), 'a') as f:
-            f.write(f"Topic: {_t}\n")
-            for _w, _p in sorted(_wp.items(), key=lambda x: x[1], reverse=True)[:10]:
-                f.write(f"{round(_p,4)}\t{_w}")
-                f.write('\n')
-            f.write('\n')
+    get_word_prob_dist(path_word_weights, output_data_path, verbose)
+    
 
 # ===================================== end of program ========================================
