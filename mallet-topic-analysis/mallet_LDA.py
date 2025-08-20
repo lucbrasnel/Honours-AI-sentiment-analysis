@@ -22,6 +22,11 @@ def format_data(data, verbose):
     uri = stuff[0]
     topic = stuff[1]
 
+    # replace \n chars in text
+    text = re.sub('\r?\n', ' ', text)
+    text = re.sub('\n', ' ', text)
+    text = re.sub('\r', ' ', text)
+
     if verbose: print(f"extracted uri:{uri} on {topic}")
 
     return uri, topic, text
