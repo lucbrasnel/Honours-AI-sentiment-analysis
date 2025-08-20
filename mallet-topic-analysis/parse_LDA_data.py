@@ -21,9 +21,12 @@ def read_training_text(training_data):
         if verbose: print(f"reading line:{count}")
 
         # extract data
-        txtindx = line.index('no_label')
+        stuff = line.split(' ')
 
-        text = str(line[txtindx+2:-1])
+        text = ' '.join(stuff[2:])
+
+        #clean text
+        text = text.strip()
 
         text_data.append(text)
 
