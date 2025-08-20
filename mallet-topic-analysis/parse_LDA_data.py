@@ -83,9 +83,9 @@ if __name__ == "__main__":
 
     if verbose: print(f"topic dist len: {len(t_dist), len(t_dist[0])}")
 
-    for i in numTopics-1:
-        for p, d in lmw.get_top_docs(textData, t_dist, topic_index=0, n=100):
-            with open((output_data_path+f"/out/topic_{i}_op_docs.txt"), 'a') as f:
+    for i in range(int(numTopics)):
+        for p, d in lmw.get_top_docs(textData, t_dist, topic_index=i, n=100):
+            with open((output_data_path+f"/out/topic_{i}_top_docs.txt"), 'a') as f:
                 f.write(f"{round(p,4)}\t{d}")
                 f.write('\n')
 
