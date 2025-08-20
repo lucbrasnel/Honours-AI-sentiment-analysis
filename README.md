@@ -16,11 +16,12 @@ The following tools are used through the programs contained in this repository:
 ## Config And Data files
 Example config files are included, but must be named config.ini for programs to utilize them.
 
+### Bsky Scraper
 Data files are produced by each program, but must be supplied in this order:
 - bsky_keyword_scraper:
 	- .jsonl
 
-MALLET
+### MALLET
 - Clean data, but retain jsonl format
 - Put jsonl through MALLET exporter:
 	- .txt
@@ -33,7 +34,7 @@ MALLET
 	- .training file
 	- word weights file
 
-VADER Sentiment Analysis
+### VADER Sentiment Analysis
 - Clean data, but retain jsonl format
 - Put jsonl file in project folder:
 	- .jsonl
