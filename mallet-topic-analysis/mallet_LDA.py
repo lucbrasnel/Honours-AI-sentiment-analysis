@@ -2,7 +2,6 @@ import little_mallet_wrapper as lmw
 import numpy as np
 import pandas as pd
 import configparser
-import json
 import re
 import os
 
