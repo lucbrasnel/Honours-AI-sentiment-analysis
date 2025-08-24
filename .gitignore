@@ -636,8 +636,10 @@ FodyWeavers.xsd
 bsky-keyword-scraper/Scraper_Out/**
 nltk-vader-sentiment-analysis/projects/**
 mallet-topic-analysis/projects/**
+combine-analyze/projects/**
 
 #config files
 bsky-keyword-scraper/config.ini
 mallet-topic-analysis/config.ini
 nltk-vader-sentiment-analysis/config.ini
+combine-analyze/config.ini
