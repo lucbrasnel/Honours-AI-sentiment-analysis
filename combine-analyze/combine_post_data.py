@@ -11,7 +11,7 @@ config = configparser.ConfigParser()
 
 # ====================================== func defs ============================================
 
-def get_post_data(posts_file, sent_file, topic_file, verbose = False):
+def get_post_data(posts_file verbose = False):
     posts = []
 
     # open file
@@ -47,6 +47,18 @@ def get_post_data(posts_file, sent_file, topic_file, verbose = False):
 
 #----------------------------------------------------------------------------------------------
 
+def get_sent_data()
+
+#----------------------------------------------------------------------------------------------
+   
+def get_topic_data()
+   
+#----------------------------------------------------------------------------------------------
+   
+def merge_data()
+   
+#----------------------------------------------------------------------------------------------
+
 def write_data_to_file(outfile, data):
     #write line to file
     with open(outfile, 'a') as f:
@@ -64,7 +76,12 @@ if __name__ == "__main__":
     topic_file = config['DEFUALT']['savefile']
     verbose = config['DEFUALT'].getboolean('verbose')
 
-    # get text from input
-    get_post_data(infile, verbose)
+    # get post data
+
+    # get sent data
+
+    # get topic data
+
+    # export as file
 
 # ===================================== end of program ========================================
