@@ -96,28 +96,37 @@ def evaluate_topics(path_to_mallet,
 
 #----------------------------------------------------------------------------------------------  
 # updated train-topics method from lmw to also save evaluation file
-def train_get_evaluate(path_to_mallet,
+def better_train(path_to_mallet,
                       path_to_formatted_training_data,
                       path_to_model,
                       path_to_topic_keys,
                       path_to_topic_distributions,
                       path_to_word_weights,
                       path_to_diagnostics,
-                      path_to_evaluation_doc,
-                      num_topics):
+                      path_to_evaluation_doc = None,
+                      num_topics = 100):
 
     print('Training topic model...')
-    os.system(path_to_mallet + ' train-topics --input "' + path_to_formatted_training_data + '"' \
-                                          + ' --num-topics ' + str(num_topics) \
-                                          + ' --inferencer-filename "' + path_to_model + '"' \
-                                          + ' --output-topic-keys "' + path_to_topic_keys + '"' \
-                                          + ' --output-doc-topics "' + path_to_topic_distributions + '"' \
-                                          + ' --topic-word-weights-file "' + path_to_word_weights + '"' \
-                                          + ' --diagnostics-file "' + path_to_diagnostics + '"' \
-                                          + ' --evaluator-filename "' + path_to_evaluation_doc + '"' \
-                                          + ' --optimize-interval 10' \
-                                          + ' --alpha 1' \
-                                          + ' --num-iterations 2000')
+
+    cmd = path_to_mallet + ' train-topics --input "' + path_to_formatted_training_data + '"' \
+                                            + ' --num-topics ' + str(num_topics) \
+                                            + ' --inferencer-filename "' + path_to_model + '"' \
+                                            + ' --output-topic-keys "' + path_to_topic_keys + '"' \
+                                            + ' --output-doc-topics "' + path_to_topic_distributions + '"' \
+                                            + ' --topic-word-weights-file "' + path_to_word_weights + '"' \
+                                            + ' --diagnostics-file "' + path_to_diagnostics + '"' \
+                                            + ' --optimize-interval 10' \
+                                            + ' --alpha 1' \
+                                            + ' --num-iterations 2000' \
+                                            + ' --num-top-words 30'
+
+    if path_to_evaluation_doc != None:
+        cmd = cmd + ' --evaluator-filename "' + path_to_evaluation_doc + '"'
+        
+        os.system(cmd)
+    else:        
+        os.system(cmd)
+
     print('Complete')
     
 # ===================================== Main func =============================================
@@ -220,7 +229,7 @@ if __name__ == "__main__":
 
         for topic_num in topic_num_range:
             # train model
-            train_get_evaluate(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, path_evaluation_doc, topic_num)
+            better_train(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, path_evaluation_doc, topic_num)
              
             # infer on test set
             evaluate_topics(mallet_path, path_formatted_test_data, path_evaluation_doc, path_document_probabilities, path_output_probabilities)
@@ -247,6 +256,6 @@ if __name__ == "__main__":
         lmw.import_data(mallet_path, path_training_data, path_formatted_training_data, textData, uris)
 
         # train topic model
-        lmw.train_topic_model(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, numTopics)
+        better_train(mallet_path, path_formatted_training_data, path_model, path_topic_keys, path_topic_distributions, path_word_weights, path_diagnostics, num_topics = numTopics)
 
 # ===================================== end of program ========================================
