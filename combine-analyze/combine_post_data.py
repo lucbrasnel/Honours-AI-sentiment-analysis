@@ -89,7 +89,7 @@ def merge_data(posts, sents, topics, topic_num, verbose = False):
    
 #----------------------------------------------------------------------------------------------
 
-def write_data_to_file(outfile, data, verbose = False):
+def write_data_to_file(data, outfile, verbose = False):
 	#write line to file
 	data.to_json(path_or_buf = outfile, orient = 'records', lines = True)
 	if verbose: print(f"\nCreated output file: {outfile}")
