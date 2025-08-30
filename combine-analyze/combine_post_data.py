@@ -47,7 +47,7 @@ def get_topic_data(topic_file, verbose = False):
    
 #----------------------------------------------------------------------------------------------
    
-def merge_data(posts, sents, topics, topic_num, verbose = False):
+def merge_datasets(posts, sents, topics, topic_num, verbose = False):
 	# Merge datasets
 	merged_data = pd.merge(posts, sents, how = 'inner', on = 'uri')
 	if verbose: print(f"\nMerged posts and sents: {merged_data.shape}\n{merged_data.head(n=3)}\n")
@@ -86,7 +86,64 @@ def merge_data(posts, sents, topics, topic_num, verbose = False):
 
 
 	return merged_data, topic_sents
+
+#----------------------------------------------------------------------------------------------
    
+def get_top_topics(merged_data, topic_num, top_num, out_path, verbose = False):
+	count = 0
+
+	out = {
+		'uri' : '',
+		'compound_sent' : 0
+	}
+
+	headers = ['uri','compound_sent','top_topics']
+	
+	# for each posts
+	for i in range(len(merged_data)):
+
+		# get sentiment and uri
+		uri = merged_data.iat[i, 0]
+		sent_score = merged_data.at[i, 'compound_sent']
+
+		# get topic dits
+		top_topics = [-1] * top_num
+
+		for x in range(top_num):
+			# calc top n topics
+			for t in range(topic_num):
+				# check if populated
+				if(top_topics[x] == -1 and not(t in top_topics)):
+					top_topics[x] = t
+				elif(top_topics[x] != -1):
+					topic_dist = merged_data.at[i, f'topic_{t}']
+					compare_dist = merged_data.at[i, f'topic_{top_topics[x]}']
+
+					# check if larger
+					if (topic_dist > compare_dist):
+
+						# if larger, check if already in list
+						if not(t in top_topics):
+							top_topics[x] = t
+		
+		if verbose: print(f"Processing top topics of post {count}: {top_topics}")
+		# Recombine
+		out['uri'] = uri
+		out['compound_sent'] = sent_score
+
+		# write to files
+		for topic in top_topics:
+			file_path = out_path + f'/top topics/post_sents_for_{topic}.jsonl'
+			#write line to file
+			with open(file_path, 'a') as f:
+				json.dump(out, f)
+				f.write('\n')
+
+		# update count
+		count = count + 1
+
+	
+
 #----------------------------------------------------------------------------------------------
 
 def write_data_to_file(data, outfile, verbose = False):
@@ -119,7 +176,10 @@ if __name__ == "__main__":
 	topic_dists, numTopics = get_topic_data(topic_file, verbose)
 
 	# Merge # calc topic sents with matrix mult
-	merged, topic_sents = merge_data(posts, sents, topic_dists, numTopics, verbose)
+	merged, topic_sents = merge_datasets(posts, sents, topic_dists, numTopics, verbose)
+
+	# top topics
+	top_topics = get_top_topics(merged, numTopics, 5, output_path, verbose)
 
 	# export as files
 	# create dir for project + file paths
