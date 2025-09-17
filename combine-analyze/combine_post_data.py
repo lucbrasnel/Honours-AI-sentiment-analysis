@@ -94,10 +94,12 @@ def get_top_topics(merged_data, topic_num, top_num, out_path, verbose = False):
 
 	out = {
 		'uri' : '',
-		'compound_sent' : 0
+		'compound_sent' : 0,
+		'likes' : 0,
+		'replies' : 0,
+		'reposts' : 0,
+		'created_at' : ''
 	}
-
-	headers = ['uri','compound_sent','top_topics']
 	
 	# for each posts
 	for i in range(len(merged_data)):
@@ -105,6 +107,10 @@ def get_top_topics(merged_data, topic_num, top_num, out_path, verbose = False):
 		# get sentiment and uri
 		uri = merged_data.iat[i, 0]
 		sent_score = merged_data.at[i, 'compound_sent']
+		likes = int(merged_data.at[i, 'likes'])
+		replies = int(merged_data.at[i, 'replies'])
+		reposts = int(merged_data.at[i, 'reposts'])
+		created_at = str(merged_data.at[i, 'created_at'])
 
 		# get topic dits
 		top_topics = [-1] * top_num
@@ -130,6 +136,10 @@ def get_top_topics(merged_data, topic_num, top_num, out_path, verbose = False):
 		# Recombine
 		out['uri'] = uri
 		out['compound_sent'] = sent_score
+		out['likes'] = likes
+		out['replies'] = replies
+		out['reposts'] = reposts
+		out['created_at'] = created_at
 
 		# write to files
 		for topic in top_topics:
