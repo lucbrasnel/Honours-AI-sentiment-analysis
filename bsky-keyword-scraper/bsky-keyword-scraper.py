@@ -1,8 +1,11 @@
 from atproto import Client
 import json
 from datetime import datetime, timedelta
+from calendar import monthrange
+from dateutil.relativedelta import relativedelta
 import numpy as np
 import math
+import time
 import ast
 import configparser
 
@@ -219,7 +222,7 @@ def get_random_posts(output_file, keyword, since, until, amount = 1000, sort = '
   if amount <= 100:
     req_amount = 1
   else:
-    req_amount = math.ceil(amount/100) #amount of requests to be sent
+    req_amount = math.ceil((amount*1.1)/100) #amount of requests to be sent
 
   date_format = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -230,7 +233,7 @@ def get_random_posts(output_file, keyword, since, until, amount = 1000, sort = '
   total_time = (until_date - since_date).total_seconds()  + 1
   print(total_time)
   max_time = math.floor(total_time/req_amount)
-  min_time = math.ceil(max_time/2) # do not want too small of a skip between requests
+  min_time = math.ceil(max_time*0.75) # do not want too small of a skip between requests
   print(f"max t: {max_time}, min t: {min_time}")
 
   #set 1st date as until date
@@ -266,6 +269,190 @@ def get_random_posts(output_file, keyword, since, until, amount = 1000, sort = '
 
   
   if verbose: print(f"Done: saved total of {post_count} posts to file: {output_file}")
+  return data_out
+
+#----------------------------------------------------------------------------------------------
+
+# Get random posts containing a keyword across a date range by gathering over the months 
+# and save it to a jsonl file
+def get_posts_p_month(output_file, keyword, since, until, amount = 1000, sort = 'latest', verbose = False):
+  #set vars
+  post_count = 0
+  data_out = []
+  loss = 0
+
+  if verbose: print(f"Saving posts per month to file: {output_file}")
+
+  # need amount to get from date range. Othereise just randomly collecting everything
+  if amount == None:
+    print('Cannot use random without a limit')
+    return None
+  
+  # calc how many months and which months
+  date_format = "%Y-%m-%dT%H:%M:%SZ"
+
+  since_date = datetime.strptime(since, date_format)
+  until_date = datetime.strptime(until, date_format)
+
+  month_diff = (until_date.year - since_date.year) * 12 + (until_date.month - since_date.month)
+
+  # calc amount of posts needed per month
+  posts_p_month = amount/month_diff
+
+  next_month = datetime(year = until_date.year, month = until_date.month, day = monthrange(year = until_date.year, month = until_date.month)[1])
+
+  if verbose: print(f"Month Diff: {month_diff}, Posts/Month: {posts_p_month}")
+
+  # collect sets of data across each month
+  for m in range(month_diff):
+    # get which month
+    month_num = next_month.month
+    month_y = next_month.year
+
+    # calc amount of days in month
+    num_days = monthrange(month_y, month_num)[1]
+
+    if verbose: print(f"\nMonth: {next_month.strftime("%Y %b")}, Num days: {num_days}")
+
+    if m == 0: # for 1st month use until date to stay within range given
+      since_lim = datetime(year = next_month.year, month = next_month.month, day = 1, hour = 0, minute = 0, second = 0)
+      until_lim = until_date
+    elif m == month_diff: # for last month use since date to stay within range given
+      since_lim = since_date
+      until_lim = datetime(year = next_month.year, month = next_month.month, day = num_days, hour = 23, minute = 59, second = 59)
+    else:
+      since_lim = datetime(year = next_month.year, month = next_month.month, day = 1, hour = 0, minute = 0, second = 0)
+      until_lim = datetime(year = next_month.year, month = next_month.month, day = num_days, hour = 23, minute = 59, second = 59)
+
+    since_lim_str = datetime.strftime(since_lim, date_format)
+    until_lim_str = datetime.strftime(until_lim, date_format)
+
+    # calc amount of requests needed per day / amount of posts per req
+    # do test req (w/ 100 and limiters) to calc how many posts in month
+    test_data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since_lim_str, 'until' : until_lim_str, 'limit' : 100})
+
+    test_posts = test_data.posts
+    num_posts = len(test_posts)
+
+    if num_posts != 0: # if any posts to be collected in month      
+
+      if (num_posts < 100) and (posts_p_month < 100): # if test returned less than 100, there are less than 100 posts in month, and if need less than 100, do not need to do another req
+        if num_posts == posts_p_month:
+          # got exactly how many posts as needed YAY :D
+          if verbose: print(f"Perfect amount of posts for {next_month.strftime("%Y %b")} YAY")
+
+          posts = test_posts
+        else:
+          # got less than what was needed
+          if verbose: print(f"Not enough posts for {next_month.strftime("%Y %b")}")
+          
+          posts = test_posts # Take what u can get
+
+      else: # 100 or more posts in month to collect || OR || want more than 100 posts per month
+        posts_p_day = math.ceil(posts_p_month/num_days)
+
+        if verbose: print(f"More than 100 posts for {next_month.strftime("%Y %b")}, Post/Day: {posts_p_day}")
+
+        # get posts w/ limiters for each day
+        for d in range(num_days):
+          since_day = datetime(year = since_lim.year, month = since_lim.month, day = d+1, hour = 0, minute = 0, second = 0)
+          until_day = datetime(year = until_lim.year, month = until_lim.month, day = d+1, hour = 23, minute = 59, second = 59)
+
+          since_day_str = datetime.strftime(since_day, date_format)
+          until_day_str = datetime.strftime(until_day, date_format)
+
+          # collect all posts for the day
+          posts_col = [] # to hold all posts of day
+          bflag = True
+          earliest_time = -1 # to hold last post request's time
+          earliest_uri = '' # to compare if last post of day
+          total_col = 0 # count of posts in posts_col
+
+          # ================== TO DO ========================
+          # do not rely on 100 posts to be returned if more than 100 available
+          # WHY only save 6 posts?????
+
+          while bflag:
+            if earliest_time == -1: # 1st request
+              test_data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since_day_str, 'until' : until_day_str, 'limit' : 100})
+              test_posts = test_data.posts
+
+              total_col = len(test_posts) # add to total
+
+              if len(test_posts) == 0: # no posts in day, go to next
+                bflag = False
+              elif len(test_posts) < 90: # less than 100 posts in the day
+                for p in test_posts: # save collected posts
+                  posts_col.append(p)
+
+                bflag = False
+              else: # collected 100, musts test if last
+                earliest_time = test_posts[-1].record.created_at
+                earliest_uri = test_posts[-1].uri
+
+              #if verbose: print(f"1st pass for {next_month.strftime("%Y %b")} {d+1}, Posts collected: {len(test_posts)}, Earliest: {earliest_time}, {earliest_uri}")
+
+            else: # subsequent requests
+              test_data = client.app.bsky.feed.search_posts({'q' : keyword, 'sort' : sort, 'lang' : 'en', 'since' : since_day_str, 'until' : earliest_time, 'limit' : 100})
+              test_posts = test_data.posts
+
+              if len(test_posts) > 0: # retrieved any more posts after last one
+                total_col = total_col + len(test_posts) # add to total
+
+                test_uri = test_posts[-1].uri
+
+                if test_uri == earliest_uri: # the earliest post of prev is still last, no more in the day
+                  bflag = False
+                else: # collected more, musts test if last
+                  for p in test_posts: # save collected posts
+                    posts_col.append(p) 
+
+                  earliest_time = test_posts[-1].record.created_at # must test again
+                  earliest_uri = test_posts[-1].uri
+              else: # no more posts after prev last
+                bflag = False
+
+              #if verbose: print(f"another pass for {next_month.strftime("%Y %b")} {d+1}, Posts collected: {len(test_posts)}, Total: {len(posts_col)}, Earliest: {earliest_time}, {earliest_uri}")
+
+              time.sleep(5) # wait to avoid timeout and rate limits
+                
+          if verbose: print(f"Collected {len(posts_col)} posts for {next_month.strftime("%Y %b")} {d+1}")
+
+          # Save random selection of posts for num wanted
+          if total_col >= posts_p_day: # can randomly sample from larger population
+            posts = np.random.choice(posts_col, posts_p_day, replace = False)
+          else: # not enough in pop, take what can get
+            posts = posts_col
+
+          # adjust posts/req based on prev losses
+          # calc total loss at end
+          loss = loss + (posts_p_day - len(posts))
+
+          month_file = output_file[:-6] + next_month.strftime("_%b_%y") + output_file[-6:]
+
+          # save posts for month
+          for post in posts:
+            post_data = get_post_data(post)
+            data_out.append(post_data)
+            save_to_file(post_data, month_file) # save data to jsonl file
+
+          if verbose: print(f"\n Saved {len(posts)} posts for: {next_month.strftime("%Y %b")} {d+1}, loss: {loss}")
+
+          post_count = post_count + len(posts)
+        
+    else:
+      # no posts in month
+      if verbose: print(f"No posts for {next_month.strftime("%Y %b")}") 
+
+      loss = loss + posts_p_month
+
+    # set next month
+    next_month = next_month + relativedelta(months = 1)
+
+    time.sleep(30) # wait to avoid timeout and rate limits
+
+
+  if verbose: print(f"Done: saved total of {post_count} posts to files with loss of: {loss}")
   return data_out
 
 #----------------------------------------------------------------------------------------------
@@ -363,7 +550,9 @@ if __name__ == "__main__":
   else: limit = int(limit)
 
   verbose = config['DEFAULT'].getboolean('verbose')
-  #rndm = config['DEFAULT'].getboolean('randdom')
+
+  rndm = config['DEFAULT']['random']
+
   sort = config['DEFAULT']['sort']
   output_path = config['DEFAULT']['output_path']
 
@@ -383,12 +572,19 @@ if __name__ == "__main__":
   if blogin:
     for x in keywords:
       print(f"Extracting posts about {x} from {since} till {until}")
-      output_file = f"{output_path}/{x}_{sort}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
-
-      data = get_posts_with_earliest(output_file, x, since, until, limit, sort, verbose)
-      #data = get_posts_with_pages(output_file, x, since, until, limit, sort, verbose) #if not(rndom):  #Not working for large collections
-      #else: data = get_random_posts(output_file, x, since, until, limit, sort, verbose) #not finished
+      output_file = f"{output_path}/{x}_{sort}_{rndm}_{since_date.strftime('%d%b%Y')}_{until_date.strftime('%d%b%Y')}_posts.jsonl"
+       
+      if rndm == 'none':  
+        # data = get_posts_with_pages(output_file, x, since, until, limit, sort, verbose) #Not working for large collections
+        data = get_posts_with_earliest(output_file, x, since, until, limit, sort, verbose)
+      elif rndm == 'random': 
+        #data = get_random_posts(output_file, x, since, until, limit, sort, verbose) #not finished
+        print('Random collection is not finished')
+      elif rndm == 'month':
+        data = get_posts_p_month(output_file, x, since, until, limit, sort, verbose)
+        
       print(f"successfully extracted {output_file}\n")
+      
   else:
     print('Couldnt login')
 
