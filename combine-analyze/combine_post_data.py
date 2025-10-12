@@ -189,7 +189,8 @@ if __name__ == "__main__":
 	merged, topic_sents = merge_datasets(posts, sents, topic_dists, numTopics, verbose)
 
 	# top topics
-	top_topics = get_top_topics(merged, numTopics, 5, output_path, verbose)
+	top_num = 5 # topic must be in top _ topics for post by distribution
+	top_topics = get_top_topics(merged, numTopics, top_num, output_path, verbose)
 
 	# export as files
 	# create dir for project + file paths
